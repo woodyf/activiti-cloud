@@ -28,12 +28,9 @@ public class KeycloakSecurityContextPrincipalProvider implements SecurityContext
 
     @Override
     public Optional<Principal> getCurrentPrincipal() {
-        return Optional.ofNullable(SecurityContextHolder.getContext())
-            .map(SecurityContext::getAuthentication)
-            .map(Authentication::getPrincipal)
-            .filter(Jwt.class::isInstance)
-            .map(Jwt.class::cast)
-            .map(jwt -> new JwtAuthenticationToken(jwt));
+        return Optional.ofNullable(SecurityContextHolder
+                                       .getContext()
+                                       .getAuthentication());
     }
 
 }

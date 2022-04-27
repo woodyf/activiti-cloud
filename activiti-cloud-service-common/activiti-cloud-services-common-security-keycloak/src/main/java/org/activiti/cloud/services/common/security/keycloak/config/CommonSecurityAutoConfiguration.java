@@ -15,6 +15,15 @@
  */
 package org.activiti.cloud.services.common.security.keycloak.config;
 
+import com.nimbusds.jose.JOSEObjectType;
+import com.nimbusds.jose.KeySourceException;
+import com.nimbusds.jose.proc.DefaultJOSEObjectTypeVerifier;
+import com.nimbusds.jose.proc.JWSAlgorithmFamilyJWSKeySelector;
+import com.nimbusds.jose.proc.JWSKeySelector;
+import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jwt.proc.DefaultJWTProcessor;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.List;
 import org.activiti.api.runtime.shared.security.PrincipalGroupsProvider;
 import org.activiti.api.runtime.shared.security.PrincipalIdentityProvider;
@@ -43,9 +52,18 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.session.SessionRegistryImpl;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.authentication.session.RegisterSessionAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
@@ -59,14 +77,19 @@ import org.springframework.web.cors.CorsConfiguration;
 public class CommonSecurityAutoConfiguration extends WebSecurityConfigurerAdapter {
 
     private final AuthorizationConfigurer authorizationConfigurer;
+    private final OAuth2UserService oAuth2UserService;
+    private final ClientRegistrationRepository clientRegistrationRepository;
     @Value("${keycloak.resource}" )
     private String resource;
     @Value("${keycloak.use-resource-role-mappings:false}" )
     private boolean useResourceRoleMapping;
 
     @Autowired
-    public CommonSecurityAutoConfiguration(AuthorizationConfigurer authorizationConfigurer) {
+    public CommonSecurityAutoConfiguration(AuthorizationConfigurer authorizationConfigurer,
+                                           ClientRegistrationRepository clientRegistrationRepository) {
         this.authorizationConfigurer = authorizationConfigurer;
+        this.oAuth2UserService = new DefaultOAuth2UserService();
+        this.clientRegistrationRepository = clientRegistrationRepository;
     }
 
     @Bean
@@ -173,10 +196,25 @@ public class CommonSecurityAutoConfiguration extends WebSecurityConfigurerAdapte
             .jwtAuthenticationConverter(jwtAuthenticationConverter());
     }
 
-    private JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
-        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(new KeycloakJwtGrantedAuthorityConverter(jwtAccessTokenProvider()));
-        return jwtAuthenticationConverter;
+    @Bean
+    public JwtDecoder jwtDecoder(@Value("${spring.security.oauth2.resourceserver.jwt.key-set-uri}") String jwkSetUrl) throws MalformedURLException, KeySourceException {
+        // makes a request to the JWK Set endpoint
+        JWSKeySelector<SecurityContext> jwsKeySelector =
+            JWSAlgorithmFamilyJWSKeySelector.fromJWKSetURL(new URL(jwkSetUrl));
+
+        DefaultJWTProcessor<SecurityContext> jwtProcessor =
+            new DefaultJWTProcessor<>();
+        jwtProcessor.setJWSKeySelector(jwsKeySelector);
+
+        jwtProcessor.setJWSTypeVerifier(new DefaultJOSEObjectTypeVerifier(new JOSEObjectType("at+jwt")));
+
+        return new NimbusJwtDecoder(jwtProcessor);
+    }
+
+    private Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter() {
+        ClientRegistration clientRegistration = clientRegistrationRepository.findByRegistrationId("hxpidp");
+        KeycloakJwtGrantedAuthorityConverter jwtGrantedAuthoritiesConverter = new KeycloakJwtGrantedAuthorityConverter(jwtAccessTokenProvider());
+        return  new JwtUserInfoUriAuthenticationConverter(jwtGrantedAuthoritiesConverter, clientRegistration, oAuth2UserService);
     }
 
 }

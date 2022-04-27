@@ -17,7 +17,7 @@ package org.activiti.cloud.services.common.security.keycloak;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.Optional;
-import org.activiti.cloud.services.common.security.keycloak.config.JwtAdapter;
+import org.activiti.cloud.services.common.security.keycloak.jwt.JwtAdapter;
 import org.springframework.lang.NonNull;
 import org.springframework.security.oauth2.jwt.Jwt;
 
@@ -50,8 +50,8 @@ public class KeycloakAccessTokenValidator {
         return accessToken.getExpiresAt() != null && accessToken.getExpiresAt().toEpochMilli() != 0 ? currentTime() > accessToken.getExpiresAt().toEpochMilli() : false;
     }
 
-    public int currentTime() {
-        return ((int) (System.currentTimeMillis() / 1000)) + offset;
+    public long currentTime() {
+        return System.currentTimeMillis() + offset;
     }
 
     public void setOffset(int offset) {

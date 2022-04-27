@@ -18,7 +18,7 @@ package org.activiti.cloud.services.common.security.keycloak;
 import java.security.Principal;
 import java.util.List;
 import org.activiti.api.runtime.shared.security.PrincipalGroupsProvider;
-import org.activiti.cloud.services.common.security.keycloak.config.JwtAdapter;
+import org.activiti.cloud.services.common.security.keycloak.jwt.JwtAdapter;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 

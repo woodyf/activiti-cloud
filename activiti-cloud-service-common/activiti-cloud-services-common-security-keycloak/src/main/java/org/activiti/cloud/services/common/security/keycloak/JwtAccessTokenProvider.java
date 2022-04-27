@@ -17,9 +17,9 @@ package org.activiti.cloud.services.common.security.keycloak;
 
 import java.security.Principal;
 import java.util.Optional;
-import org.activiti.cloud.services.common.security.keycloak.config.KeycloakJwtAdaptor;
-import org.activiti.cloud.services.common.security.keycloak.config.KeycloakResourceJwtAdapter;
-import org.activiti.cloud.services.common.security.keycloak.config.JwtAdapter;
+import org.activiti.cloud.services.common.security.keycloak.jwt.KeycloakJwtAdaptor;
+import org.activiti.cloud.services.common.security.keycloak.jwt.KeycloakResourceJwtAdapter;
+import org.activiti.cloud.services.common.security.keycloak.jwt.JwtAdapter;
 import org.springframework.lang.NonNull;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -34,19 +34,29 @@ public class JwtAccessTokenProvider {
         this.useResource = useResource;
     }
 
+    @Deprecated
     public JwtAdapter accessToken(@NonNull Jwt jwt) {
         if (useResource) {
-            return new KeycloakResourceJwtAdapter(clientId, jwt);
+            return new KeycloakResourceJwtAdapter(clientId, jwt, null);
         } else {
-            return new KeycloakJwtAdaptor(jwt);
+            return new KeycloakJwtAdaptor(jwt, null);
         }
     }
 
     public Optional<JwtAdapter> accessToken(@NonNull Principal principal) {
-        return Optional.of(principal)
+        return (Optional<JwtAdapter>) Optional.of(principal)
             .filter(JwtAuthenticationToken.class::isInstance)
             .map(JwtAuthenticationToken.class::cast)
-            .map(jwtAuthenticationToken -> accessToken(jwtAuthenticationToken.getToken()));
+            .map(jwtAuthenticationToken -> accessToken(jwtAuthenticationToken));
+    }
+
+    @Deprecated
+    private JwtAdapter accessToken(@NonNull JwtAuthenticationToken jwt) {
+        if (useResource) {
+            return new KeycloakResourceJwtAdapter(clientId, jwt.getToken(), jwt);
+        } else {
+            return new KeycloakJwtAdaptor(jwt.getToken(), jwt);
+        }
     }
 
 }

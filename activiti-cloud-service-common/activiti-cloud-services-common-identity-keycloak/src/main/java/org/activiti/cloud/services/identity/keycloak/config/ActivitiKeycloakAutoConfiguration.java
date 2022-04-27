@@ -17,7 +17,7 @@ package org.activiti.cloud.services.identity.keycloak.config;
 
 import org.activiti.cloud.identity.IdentityManagementService;
 import org.activiti.cloud.services.identity.keycloak.ActivitiKeycloakProperties;
-import org.activiti.cloud.services.identity.keycloak.KeycloakClientPrincipalDetailsProvider;
+import org.activiti.cloud.services.identity.keycloak.HxpIdpClientPrincipalDetailsProvider;
 import org.activiti.cloud.services.identity.keycloak.KeycloakInstanceWrapper;
 import org.activiti.cloud.services.identity.keycloak.KeycloakManagementService;
 import org.activiti.cloud.services.identity.keycloak.KeycloakProperties;
@@ -58,17 +58,10 @@ public class ActivitiKeycloakAutoConfiguration {
     @Bean
     @Order(Ordered.LOWEST_PRECEDENCE)
     @ConditionalOnMissingBean
-    public KeycloakClientPrincipalDetailsProvider keycloakClientPrincipalDetailsProvider(KeycloakInstanceWrapper keycloakInstanceWrapper) {
-        return new KeycloakClientPrincipalDetailsProvider(keycloakInstanceWrapper);
+    public HxpIdpClientPrincipalDetailsProvider keycloakClientPrincipalDetailsProvider() {
+        return new HxpIdpClientPrincipalDetailsProvider();
     }
 
-    @Bean
-    @ConditionalOnMissingBean
-    public IdentityManagementService identityManagementService(KeycloakClient keycloakClient,
-                                                               KeycloakUserToUser keycloakUserToUser,
-                                                               KeycloakGroupToGroup keycloakGroupToGroup) {
-        return new KeycloakManagementService(keycloakClient, keycloakUserToUser, keycloakGroupToGroup);
-    }
 
     @Bean
     @ConditionalOnMissingBean

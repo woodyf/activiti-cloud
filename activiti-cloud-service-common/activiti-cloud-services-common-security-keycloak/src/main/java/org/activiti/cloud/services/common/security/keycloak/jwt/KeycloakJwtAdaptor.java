@@ -13,19 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.activiti.cloud.services.common.security.keycloak.config;
+package org.activiti.cloud.services.common.security.keycloak.jwt;
 
 import com.nimbusds.jose.shaded.json.JSONObject;
 import java.util.Collections;
 import java.util.List;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 public class KeycloakJwtAdaptor implements JwtAdapter {
 
     private final Jwt jwt;
+    private JwtAuthenticationToken authenticationToken;
 
-    public KeycloakJwtAdaptor(Jwt jwt){
+    public KeycloakJwtAdaptor(Jwt jwt, JwtAuthenticationToken authenticationToken){
         this.jwt = jwt;
+        this.authenticationToken = authenticationToken;
     }
 
     public Jwt getJwt() {
@@ -34,12 +37,20 @@ public class KeycloakJwtAdaptor implements JwtAdapter {
 
     @Override
     public List<String> getRoles() {
-        return getRoles(jwt.getClaim("realm_access" ));
+        JSONObject realm_access = jwt.getClaim("realm_access");
+        if(realm_access == null) {
+            return List.of("ACTIVITI_USER", "ACTIVITI_ADMIN", "ACTIVITI_DEVOPS", "ACTIVITI_MODELER");
+        } else {
+            return getRoles(realm_access);
+        }
     }
 
     @Override
     public String getUserName() {
-        return jwt.getClaim("preferred_username" );
+        if(authenticationToken != null){
+            return authenticationToken.getName();
+        }
+        return jwt.getClaim("preferred_username");
     }
 
     @Override

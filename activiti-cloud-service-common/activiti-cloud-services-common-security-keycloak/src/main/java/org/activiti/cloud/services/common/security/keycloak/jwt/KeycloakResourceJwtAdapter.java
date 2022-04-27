@@ -13,21 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.activiti.cloud.services.common.security.keycloak.config;
+package org.activiti.cloud.services.common.security.keycloak.jwt;
 
 import com.nimbusds.jose.shaded.json.JSONObject;
 import java.util.Collections;
 import java.util.List;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 public class KeycloakResourceJwtAdapter implements JwtAdapter {
 
     private final String clientId;
     private final Jwt jwt;
+    private final JwtAuthenticationToken authenticationToken;
 
-    public KeycloakResourceJwtAdapter(String clientId, Jwt jwt) {
+    public KeycloakResourceJwtAdapter(String clientId, Jwt jwt, JwtAuthenticationToken authenticationToken) {
         this.clientId = clientId;
         this.jwt = jwt;
+        this.authenticationToken = authenticationToken;
     }
 
     @Override
@@ -47,6 +50,9 @@ public class KeycloakResourceJwtAdapter implements JwtAdapter {
 
     @Override
     public String getUserName() {
+        if(authenticationToken != null){
+            return authenticationToken.getName();
+        }
         return jwt.getClaim("preferred_username");
     }
 
@@ -54,8 +60,12 @@ public class KeycloakResourceJwtAdapter implements JwtAdapter {
 
     private List<String> getFromClient(String clientId, Jwt jwt) {
         JSONObject resourceAccess = jwt.getClaim("resource_access" );
-        JSONObject client = (JSONObject) resourceAccess.get(clientId);
-        return getRoles(client);
+        if(resourceAccess == null) {
+            return List.of("ACTIVIT_USER", "ACTIVITI_ADMIN", "ACTIVITI_DEVOPS");
+        } else {
+            JSONObject client = (JSONObject) resourceAccess.get(clientId);
+            return getRoles(client);
+        }
     }
 
     private List<String> getRoles(JSONObject getRolesParent) {

@@ -15,10 +15,10 @@
  */
 package org.activiti.cloud.services.common.security.keycloak.config;
 
-import com.nimbusds.jose.shaded.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Collection;
 import org.activiti.cloud.services.common.security.keycloak.JwtAccessTokenProvider;
+import org.activiti.cloud.services.common.security.keycloak.jwt.JwtAdapter;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -36,7 +36,8 @@ public class KeycloakJwtGrantedAuthorityConverter implements Converter<Jwt, Coll
     @Override
     public Collection<GrantedAuthority> convert(Jwt jwt) {
         Collection<GrantedAuthority> grantedAuthorities = new ArrayList<>();
-        for (String authority : jwtAccessTokenProvider.accessToken(jwt).getRoles()) {
+        JwtAdapter jwtAdapter = jwtAccessTokenProvider.accessToken(jwt);
+        for (String authority : jwtAdapter.getRoles()) {
             grantedAuthorities.add(new SimpleGrantedAuthority(this.authorityPrefix + authority));
         }
         return grantedAuthorities;
